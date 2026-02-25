@@ -67,4 +67,5 @@ htmlcov/
 learn.json
 .mypy_cache/
 idk.tsx
-idk.ts
+idk.ts.env
+backend/.env

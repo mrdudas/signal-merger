@@ -14,7 +14,13 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 app = FastAPI()
-gemini_api = genai.Client(api_key=GEMINI_API_KEY)
+
+# Gemini client is optional – ha nincs API kulcs, az /ai endpoint 503-mal válaszol
+gemini_api = None
+if GEMINI_API_KEY:
+    gemini_api = genai.Client(api_key=GEMINI_API_KEY)
+else:
+    print("⚠️  GEMINI_API_KEY nincs beállítva – az AI asszisztens kikapcsolva.")
 
 # Enable CORS
 app.add_middleware(
@@ -40,6 +46,8 @@ class Message(BaseModel):
 
 @app.post("/ai")
 async def process_ai_message(request: Message) -> FunctionCallResponse:
+    if not gemini_api:
+        raise HTTPException(status_code=503, detail="AI asszisztens nem elérhető: GEMINI_API_KEY nincs beállítva.")
     print(FunctionCallResponse)
     try:
         response = gemini_api.models.generate_content(
