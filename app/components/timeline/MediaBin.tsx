@@ -8,6 +8,7 @@ import {
   Upload,
   Music,
   Trash2,
+  Activity,
   SplitSquareHorizontal,
   ChevronDown,
   ChevronUp,
@@ -55,6 +56,7 @@ interface MediaBinProps {
   handleDeleteFromContext: () => Promise<void>;
   handleSplitAudioFromContext: () => Promise<void>;
   handleCloseContextMenu: () => void;
+  onUpdateSignalColumn?: (id: string, column: string) => void;
 }
 
 // Memoized component for video thumbnails to prevent flickering
@@ -246,6 +248,7 @@ export default function MediaBin() {
     handleDeleteFromContext,
     handleSplitAudioFromContext,
     handleCloseContextMenu,
+    onUpdateSignalColumn,
   } = useOutletContext<MediaBinProps>();
 
   // Drag & Drop state for external file imports
@@ -370,6 +373,8 @@ export default function MediaBin() {
         return <Type className="h-4 w-4" />;
       case "audio":
         return <Music className="h-4 w-4" />;
+      case "signal":
+        return <Activity className="h-4 w-4" />;
       default:
         return <FileImage className="h-4 w-4" />;
     }
@@ -390,8 +395,9 @@ export default function MediaBin() {
     ).length;
     const audio = mediaBinItems.filter((i) => i.mediaType === "audio").length;
     const text = mediaBinItems.filter((i) => i.mediaType === "text").length;
+    const signals = mediaBinItems.filter((i) => i.mediaType === "signal").length;
     const all = mediaBinItems.length;
-    return { all, videos, images, gifs, audio, text };
+    return { all, videos, images, gifs, audio, text, signals };
   }, [mediaBinItems]);
 
   const defaultArrangedItems = useMemo(() => {
@@ -419,12 +425,15 @@ export default function MediaBin() {
       return arr;
     };
 
+    const signals = mediaBinItems.filter((i) => i.mediaType === "signal");
+
     return {
       videos: maybeSort(videos),
       gifs: maybeSort(gifs),
       images: maybeSort(images),
       audio: maybeSort(audio),
       text: maybeSort(text),
+      signals: maybeSort(signals),
     };
   }, [mediaBinItems, sortBy]);
   const renderThumbnail = (item: MediaBinItem) => {
@@ -481,6 +490,13 @@ export default function MediaBin() {
         return (
           <div className="w-12 h-8 rounded border border-border/50 bg-card flex items-center justify-center">
             <Music className="h-4 w-4 text-muted-foreground" />
+          </div>
+        );
+
+      case "signal":
+        return (
+          <div className="w-12 h-8 rounded border border-teal-500/50 overflow-hidden bg-teal-950 flex items-center justify-center">
+            <Activity className="h-4 w-4 text-teal-400" />
           </div>
         );
 
@@ -694,17 +710,32 @@ export default function MediaBin() {
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <Badge
                         variant="secondary"
-                        className="text-xs px-1 py-0 h-auto"
+                        className={`text-xs px-1 py-0 h-auto ${item.mediaType === "signal" ? "bg-teal-900 text-teal-300 border-teal-700" : ""}`}
                       >
                         {item.isUploading ? "uploading" : item.mediaType}
                       </Badge>
-                      {(item.mediaType === "video" || item.mediaType === "audio" || item.mediaType === "groupped_scrubber") && item.durationInSeconds > 0 && !item.isUploading && (
+                      {(item.mediaType === "video" || item.mediaType === "audio" || item.mediaType === "groupped_scrubber" || item.mediaType === "signal") && item.durationInSeconds > 0 && !item.isUploading && (
                         <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
                           <Clock className="h-2.5 w-2.5" />
                           {item.durationInSeconds.toFixed(1)}s
                         </div>
                       )}
                     </div>
+                    {item.mediaType === "signal" && !item.isUploading && item.signalColumns && item.signalColumns.length > 0 && onUpdateSignalColumn && (
+                      <div className="mt-1">
+                        <select
+                          className="w-full text-xs bg-teal-950 border border-teal-700/50 rounded px-1 py-0.5 text-teal-300 cursor-pointer"
+                          value={item.signalColumn ?? ""}
+                          onChange={(e) => onUpdateSignalColumn(item.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onDragStart={(e) => e.stopPropagation()}
+                        >
+                          {item.signalColumns.map((col) => (
+                            <option key={col} value={col}>{col}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -754,6 +785,12 @@ export default function MediaBin() {
                 title: "Text",
                 items: groupedItems.text,
                 count: counts.text,
+              },
+              {
+                key: "signals" as const,
+                title: "Signals",
+                items: groupedItems.signals,
+                count: counts.signals,
               },
             ]
               .filter((section) => section.count > 0)

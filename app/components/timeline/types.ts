@@ -1,11 +1,16 @@
 // base type for all scrubbers
 export interface BaseScrubber {
   id: string;
-  mediaType: "video" | "image" | "audio" | "text" | "groupped_scrubber";
+  mediaType: "video" | "image" | "audio" | "text" | "groupped_scrubber" | "signal";
   mediaUrlLocal: string | null; // null for text
   mediaUrlRemote: string | null;
   media_width: number; // width of the media in pixels
   media_height: number; // height of the media in pixels
+
+  // Signal-specific fields (only used when mediaType === "signal")
+  signalColumn?: string | null;      // selected CSV column name
+  signalColumns?: string[] | null;   // all available numeric columns
+  signalSampleRate?: number | null;  // Hz, e.g. 200
 
   text: TextProperties | null;
   groupped_scrubbers: ScrubberState[] | null; // null for not grouped

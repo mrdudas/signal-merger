@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { DEFAULT_TRACK_HEIGHT, type ScrubberState, type Transition } from "./types";
 import { Trash2, Group, Ungroup, Archive } from "lucide-react";
+import { SignalWaveform } from "./SignalWaveform";
 
 // something something for the css not gonna bother with it for now
 export interface SnapConfig {
@@ -305,6 +306,7 @@ export const Scrubber: React.FC<ScrubberProps> = ({
       default: "bg-primary border-primary/60 text-primary-foreground",
       audio: "bg-blue-600 border-blue-400 text-white",
       groupped_scrubber: "bg-gray-600 border-gray-400 text-white",
+      signal: "bg-teal-700 border-teal-500 text-white",
     };
 
     const selectedColors = {
@@ -319,6 +321,8 @@ export const Scrubber: React.FC<ScrubberProps> = ({
         "bg-primary border-primary text-primary-foreground ring-2 ring-primary/50",
       groupped_scrubber:
         "bg-gray-600 border-gray-400 text-white ring-2 ring-gray-400/50",
+      signal:
+        "bg-teal-700 border-teal-400 text-white ring-2 ring-teal-400/50",
     };
 
     const colorSet = isSelected ? selectedColors : baseColors;
@@ -437,7 +441,20 @@ export const Scrubber: React.FC<ScrubberProps> = ({
           {scrubber.mediaType === "text" && "T"}
           {scrubber.mediaType === "audio" && "A"}
           {scrubber.mediaType === "groupped_scrubber" && "G"}
+          {scrubber.mediaType === "signal" && "S"}
         </div>
+
+        {/* Signal waveform (rendered behind name) */}
+        {scrubber.mediaType === "signal" && scrubber.mediaUrlLocal && scrubber.signalColumn && (
+          <SignalWaveform
+            csvPath={scrubber.mediaUrlLocal}
+            column={scrubber.signalColumn}
+            sampleRate={scrubber.signalSampleRate ?? 200}
+            width={scrubber.width}
+            height={DEFAULT_TRACK_HEIGHT - 4}
+            color="#2dd4bf"
+          />
+        )}
 
         {/* Media name */}
         <div className="absolute top-0.5 left-6 right-6 text-xs truncate opacity-90 pointer-events-none">

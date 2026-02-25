@@ -243,12 +243,95 @@ export const useMediaBin = (
   const handleAddMediaToBin = useCallback(async (file: File) => {
     const id = generateUUID();
     const name = file.name;
+
+    // ── CSV / Signal fájl kezelés ───────────────────────────────────────────
+    if (file.name.toLowerCase().endsWith(".csv")) {
+      const placeholder: MediaBinItem = {
+        id, name,
+        mediaType: "signal" as const,
+        mediaUrlLocal: null,
+        mediaUrlRemote: null,
+        durationInSeconds: 0,
+        media_width: 0, media_height: 0,
+        text: null,
+        signalColumn: null,
+        signalSampleRate: 200,
+        isUploading: true, uploadProgress: 0,
+        left_transition_id: null, right_transition_id: null,
+        groupped_scrubbers: null,
+      };
+      setMediaBinItems(prev => [...prev, placeholder]);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const uploadRes = await axios.post(
+          "http://127.0.0.1:3000/api/signal/upload",
+          formData,
+          {
+            onUploadProgress: (e) => {
+              if (e.total) {
+                const pct = Math.round((e.loaded * 100) / e.total);
+                setMediaBinItems(prev => prev.map(it => it.id === id ? { ...it, uploadProgress: pct } : it));
+              }
+            },
+          }
+        );
+        const { url: csvUrl, path: csvPath } = uploadRes.data;
+
+        // Fetch column list
+        let columns: string[] = [];
+        try {
+          const colRes = await fetch("http://127.0.0.1:3000/api/signal/columns", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ csv_path: csvPath }),
+          });
+          const colData = await colRes.json();
+          columns = colData.numeric_columns ?? colData.columns ?? [];
+        } catch { /* columns stay empty */ }
+
+        // Fetch duration with first numeric column
+        let durationInSeconds = 0;
+        const firstCol = columns[0];
+        if (firstCol) {
+          try {
+            const dataRes = await fetch("http://127.0.0.1:3000/api/signal/data", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ csv_path: csvPath, column: firstCol, points: 10, sample_rate: 200 }),
+            });
+            const dataJson = await dataRes.json();
+            durationInSeconds = dataJson.duration_s ?? 0;
+          } catch { /* keep 0 */ }
+        }
+
+        setMediaBinItems(prev => prev.map(it =>
+          it.id === id
+            ? {
+              ...it,
+              mediaUrlLocal: csvPath,   // absolute path for FastAPI reads
+              mediaUrlRemote: csvUrl,   // http URL as backup
+              durationInSeconds,
+              signalColumn: firstCol ?? null,
+              signalColumns: columns,
+              isUploading: false, uploadProgress: null,
+            }
+            : it
+        ));
+      } catch (err) {
+        setMediaBinItems(prev => prev.filter(it => it.id !== id));
+        throw new Error(`CSV upload failed: ${err instanceof Error ? err.message : err}`);
+      }
+      return;
+    }
+    // ── Hagyományos média fájl kezelés ──────────────────────────────────────
     let mediaType: "video" | "image" | "audio";
     if (file.type.startsWith("video/")) mediaType = "video";
     else if (file.type.startsWith("image/")) mediaType = "image";
     else if (file.type.startsWith("audio/")) mediaType = "audio";
     else {
-      alert("Unsupported file type. Please select a video or image.");
+      alert("Unsupported file type. Please select a video, image, audio or CSV file.");
       return;
     }
 
@@ -538,6 +621,12 @@ export const useMediaBin = (
     console.log("Added grouped scrubber to media bin:", newItem.name);
   }, []);
 
+  const handleUpdateSignalColumn = useCallback((id: string, column: string) => {
+    setMediaBinItems(prev =>
+      prev.map(it => it.id === id ? { ...it, signalColumn: column } : it)
+    );
+  }, []);
+
   return {
     mediaBinItems,
     isMediaLoading,
@@ -545,6 +634,7 @@ export const useMediaBin = (
     setTextItems,
     handleAddMediaToBin,
     handleAddTextToBin,
+    handleUpdateSignalColumn,
     handleDeleteMedia,
     handleSplitAudio,
     handleAddGroupToMediaBin,

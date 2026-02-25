@@ -9,11 +9,15 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "aiofiles>=25.1.0",
     "fastapi[standard]>=0.115.13",
     "google-genai>=1.22.0",
     "mypy>=1.16.1",
+    "numpy>=2.4.2",
+    "pandas>=3.0.1",
     "python-multipart>=0.0.22",
     "ruff>=0.12.1",
+    "scipy>=1.17.1",
 ]
 
 [project.optional-dependencies]

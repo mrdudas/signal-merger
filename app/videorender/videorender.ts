@@ -61,11 +61,11 @@ const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     // Accept common media file types
-    const allowedTypes = /\.(mp4|webm|mov|avi|mkv|flv|wmv|m4v|mp3|wav|aac|ogg|flac|jpg|jpeg|png|gif|bmp|webp)$/i;
+    const allowedTypes = /\.(mp4|webm|mov|avi|mkv|flv|wmv|m4v|mp3|wav|aac|ogg|flac|jpg|jpeg|png|gif|bmp|webp|csv)$/i;
     if (allowedTypes.test(file.originalname)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only media files are allowed.'));
+      cb(new Error('Invalid file type. Only media and CSV files are allowed.'));
     }
   }
 });

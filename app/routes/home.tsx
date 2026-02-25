@@ -152,6 +152,7 @@ export default function TimelineEditor() {
     handleDeleteFromContext,
     handleSplitAudioFromContext,
     handleCloseContextMenu,
+    handleUpdateSignalColumn,
   } = useMediaBin(handleDeleteScrubbersByMediaBinId);
 
   const {
@@ -756,6 +757,7 @@ export default function TimelineEditor() {
               handleDeleteFromContext={handleDeleteFromContext}
               handleSplitAudioFromContext={handleSplitAudioFromContext}
               handleCloseContextMenu={handleCloseContextMenu}
+              onUpdateSignalColumn={handleUpdateSignalColumn}
             />
           </div>
         </ResizablePanel>

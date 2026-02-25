@@ -25,6 +25,7 @@ interface LeftPanelProps {
   handleDeleteFromContext: () => void;
   handleSplitAudioFromContext: () => void;
   handleCloseContextMenu: () => void;
+  onUpdateSignalColumn?: (id: string, column: string) => void;
 }
 
 export default function LeftPanel({
@@ -37,6 +38,7 @@ export default function LeftPanel({
   handleDeleteFromContext,
   handleSplitAudioFromContext,
   handleCloseContextMenu,
+  onUpdateSignalColumn,
 }: LeftPanelProps) {
   const location = useLocation();
 
@@ -100,6 +102,7 @@ export default function LeftPanel({
               handleDeleteFromContext,
               handleSplitAudioFromContext,
               handleCloseContextMenu,
+              onUpdateSignalColumn,
             }}
           />
         </div>
