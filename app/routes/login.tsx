@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { auth } from "~/lib/auth.server";
 import { useAuth } from "~/hooks/useAuth";
 import { KimuLogo } from "~/components/ui/KimuLogo";
 import { Clapperboard, Wand2, Scissors } from "lucide-react";
 import { FaGoogle } from "react-icons/fa";
+import { authClient } from "~/lib/auth.client";
+import { useNavigate } from "react-router";
 
 export async function loader({ request }: { request: Request }) {
   // If already authenticated, redirect to projects
@@ -24,6 +26,33 @@ export async function loader({ request }: { request: Request }) {
 
 export default function LoginPage() {
   const { isSigningIn, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
+
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      if (mode === "signup") {
+        const res = await authClient.signUp.email({ email, password, name: name || email.split("@")[0] });
+        if (res.error) { setError(res.error.message ?? "Signup failed"); setLoading(false); return; }
+      } else {
+        const res = await authClient.signIn.email({ email, password });
+        if (res.error) { setError(res.error.message ?? "Login failed"); setLoading(false); return; }
+      }
+      navigate("/projects");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Auth error");
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
@@ -107,30 +136,17 @@ export default function LoginPage() {
           <p className="mt-1 text-xs text-muted-foreground">
             Cinematic editing, reimagined.
           </p>
-          <div className="mt-6 w-full max-w-sm">
+          <div className="mt-6 w-full max-w-sm space-y-3">
             <button
               onClick={signInWithGoogle}
-              disabled={!!isSigningIn}
+              disabled={!!isSigningIn || loading}
               className="w-full inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-foreground text-background text-sm"
             >
               {isSigningIn ? (
                 <>
                   <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      opacity=".25"
-                    />
-                    <path
-                      d="M22 12a10 10 0 0 1-10 10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity=".25" />
+                    <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" fill="none" />
                   </svg>
                   Signing in...
                 </>
@@ -141,6 +157,55 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex-1 h-px bg-border" />
+              or
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            <form onSubmit={handleEmailAuth} className="space-y-2">
+              {mode === "signup" && (
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              )}
+              <input
+                type="email"
+                placeholder="Email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+              >
+                {loading ? "..." : mode === "signup" ? "Create account" : "Sign in"}
+              </button>
+            </form>
+
+            <p className="text-center text-xs text-muted-foreground">
+              {mode === "signin" ? "No account? " : "Already have one? "}
+              <button onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(""); }} className="underline hover:text-foreground">
+                {mode === "signin" ? "Sign up" : "Sign in"}
+              </button>
+            </p>
           </div>
           <p className="mt-3 text-[11px] text-muted-foreground">
             We never post on your behalf.

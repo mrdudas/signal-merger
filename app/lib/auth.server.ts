@@ -33,6 +33,8 @@ const defaultTrustedOrigins = [
   // Dev
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
   // Prod (can be overridden/extended via env)
   "https://trykimu.com",
   "https://www.trykimu.com",
@@ -49,12 +51,9 @@ const trustedOrigins = Array.from(
 
 export const auth = betterAuth({
   basePath: "/api/auth",
-  // Force baseURL in development so Google gets the correct redirect_uri
-  baseURL:
-    process.env.AUTH_BASE_URL ||
-    (process.env.NODE_ENV === "development"
-      ? "http://localhost:5173"
-      : undefined),
+  // Let Better Auth auto-detect baseURL from request headers (works on any port)
+  // Override only if AUTH_BASE_URL is explicitly set in env
+  ...(process.env.AUTH_BASE_URL ? { baseURL: process.env.AUTH_BASE_URL } : {}),
   // Trust proxy headers to detect HTTPS for secure cookies
   trustProxy: process.env.NODE_ENV === "production",
   // Let Better Auth auto-detect baseURL from the request
@@ -80,12 +79,17 @@ export const auth = betterAuth({
       // redirectURI will be automatically set to: {baseURL}/api/auth/callback/google
     },
   },
+  emailAndPassword: {
+    enabled: true,
+    autoSignIn: true, // automatically sign in after registration
+  },
   session: {
     // Increase session expiry
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     cookie: {
-      // Use "lax" for same-site requests, "none" only needed for cross-origin
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "none",
+      // "lax" works for same-site requests (dev + prod over same origin)
+      // "none" + secure only needed for cross-origin (e.g. embedded iframe)
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       // In production, pin cookie domain to apex so subdomains (if any) share
       // Set via env if provided, else let browser infer from host header
